@@ -17,3 +17,14 @@ export const isDevAuth = neonAuth === null && process.env.NODE_ENV !== "producti
 
 export const DEV_AUTH_COOKIE = "dev_auth_email";
 export const SIGN_IN_PATH = "/auth/sign-in";
+
+/**
+ * Sign-in screens that signed-out visitors must reach but that Neon Auth's
+ * own route protection does not exempt (e.g. entering the verification code).
+ */
+export const PUBLIC_AUTH_PATHS = [
+  "/auth/email-verification",
+  "/auth/reset-password",
+  "/auth/recover-account",
+  "/auth/two-factor",
+];

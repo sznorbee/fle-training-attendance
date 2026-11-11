@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { neonAuth, SIGN_IN_PATH } from "@/lib/auth/neon";
+import { neonAuth, PUBLIC_AUTH_PATHS, SIGN_IN_PATH } from "@/lib/auth/neon";
 
 const neonProxy = neonAuth?.middleware({ loginUrl: SIGN_IN_PATH });
 
@@ -8,7 +8,8 @@ const neonProxy = neonAuth?.middleware({ loginUrl: SIGN_IN_PATH });
  * This is only an optimistic check: every page and action re-checks access.
  */
 export default function proxy(request: NextRequest) {
-  return neonProxy ? neonProxy(request) : NextResponse.next();
+  if (!neonProxy || PUBLIC_AUTH_PATHS.includes(request.nextUrl.pathname)) return NextResponse.next();
+  return neonProxy(request);
 }
 
 export const config = {
