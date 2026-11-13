@@ -11,6 +11,8 @@ export type MemberInput = {
   athleteId: number | null;
 };
 
+export type MemberRow = Awaited<ReturnType<typeof listMembers>>[number];
+
 export function listMembers() {
   return db
     .select({
@@ -18,6 +20,8 @@ export function listMembers() {
       email: members.email,
       name: members.name,
       role: members.role,
+      clubId: members.clubId,
+      athleteId: members.athleteId,
       clubCode: clubs.code,
       athleteFamilyName: athletes.familyName,
       athleteGivenName: athletes.givenName,
@@ -34,7 +38,7 @@ export async function saveMember(input: MemberInput): Promise<void> {
     name: input.name,
     role: input.role,
     // Keep only the links that make sense for the role.
-    clubId: input.role === "federation" ? null : input.clubId,
+    clubId: input.role === "coach" ? input.clubId : null,
     athleteId: input.role === "athlete" ? input.athleteId : null,
   };
   await db

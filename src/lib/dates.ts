@@ -66,3 +66,38 @@ export function seasonStartYear(): number {
 export function monthDays(year: number, month: number): IsoDate[] {
   return Array.from({ length: daysInMonth(year, month) }, (_, i) => isoDate(year, month, i + 1));
 }
+
+/** The Monday-to-Sunday week containing the given day. */
+export function weekOf(date: IsoDate): IsoDate[] {
+  const [y, m, d] = date.split("-").map(Number);
+  const weekday = (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7; // Monday = 0
+  const monday = addDays(date, -weekday);
+  return Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+}
+
+/** ISO 8601 week number (weeks start on Monday, week 1 contains 4 January). */
+export function isoWeekNumber(date: IsoDate): number {
+  const thursday = addDays(weekOf(date)[0], 3);
+  const [year] = thursday.split("-").map(Number);
+  const firstThursday = addDays(weekOf(isoDate(year, 1, 4))[0], 3);
+  const days = (Date.parse(thursday) - Date.parse(firstThursday)) / 86_400_000;
+  return 1 + Math.round(days / 7);
+}
+
+export type Season = { first: IsoDate; last: IsoDate; label: string };
+
+export function season(startYear: number): Season {
+  const months = seasonMonths(startYear);
+  const lastMonth = months.at(-1)!;
+  return {
+    first: `${months[0].key}-01`,
+    last: monthDays(lastMonth.year, lastMonth.month).at(-1)!,
+    label: `${startYear}/${startYear + 1}`,
+  };
+}
+
+export const isInSeason = (date: IsoDate, { first, last }: Season) => date >= first && date <= last;
+
+/** The closest day inside the season. */
+export const clampToSeason = (date: IsoDate, { first, last }: Season) =>
+  date < first ? first : date > last ? last : date;

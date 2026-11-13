@@ -59,14 +59,14 @@ export async function setMark(viewer: Viewer, mark: DayMark): Promise<void> {
     .onConflictDoUpdate({ target: [attendance.athleteId, attendance.day], set: values });
 }
 
-/** Marks every athlete without a mark on that day as absent. Returns how many. */
+/** Marks every athlete without a mark on that day as absent. Returns who was marked. */
 export async function markUnrecordedAbsent(
   viewer: Viewer,
   athleteIds: number[],
   day: IsoDate,
-): Promise<number> {
+): Promise<number[]> {
   const allowed = await editableAthleteIds(viewer, athleteIds);
-  if (allowed.length === 0) return 0;
+  if (allowed.length === 0) return [];
 
   const values = {
     status: "absent" as const,
@@ -83,6 +83,32 @@ export async function markUnrecordedAbsent(
       set: values,
       setWhere: eq(attendance.status, "cleared"),
     })
-    .returning({ id: attendance.id });
-  return written.length;
+    .returning({ athleteId: attendance.athleteId });
+  return written.map((row) => row.athleteId);
+}
+
+/** Clears the marks of several athletes on one day (used to undo a bulk action). */
+export async function clearMarks(viewer: Viewer, athleteIds: number[], day: IsoDate): Promise<void> {
+  const allowed = await editableAthleteIds(viewer, athleteIds);
+  if (allowed.length === 0) return;
+  await db
+    .update(attendance)
+    .set({ status: "cleared", note: null, source: "app", updatedBy: viewer.email, updatedAt: sql`now()` })
+    .where(and(inArray(attendance.athleteId, allowed), eq(attendance.day, day)));
+}
+
+/** Days in the range on which at least one of the athletes has a mark. */
+export async function getRecordedDays(athleteIds: number[], from: IsoDate, to: IsoDate): Promise<Set<IsoDate>> {
+  if (athleteIds.length === 0) return new Set();
+  const rows = await db
+    .selectDistinct({ day: attendance.day })
+    .from(attendance)
+    .where(
+      and(
+        inArray(attendance.athleteId, athleteIds),
+        between(attendance.day, from, to),
+        ne(attendance.status, "cleared"),
+      ),
+    );
+  return new Set(rows.map((row) => row.day));
 }

@@ -52,7 +52,11 @@ export async function syncAction(): Promise<FormState<string>> {
   }
 }
 
-const optionalId = z.preprocess((value) => (value === "" || value === null ? null : Number(value)), z.number().int().positive().nullable());
+/** A select that is empty, or not shown for the chosen role, means "none". */
+const optionalId = z.preprocess(
+  (value) => (value === "" || value === null || value === undefined ? null : Number(value)),
+  z.number().int().positive().nullable(),
+);
 
 const memberSchema = z
   .object({

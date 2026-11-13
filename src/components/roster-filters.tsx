@@ -6,7 +6,8 @@ import { NativeSelect } from "@/components/ui/native-select";
 
 type Props = {
   action: string;
-  squads: Squad[];
+  /** Omit when the page offers its own squad switch. */
+  squads?: Squad[];
   /** Only passed for viewers who can see several clubs. */
   clubs?: Club[];
   squadId?: number;
@@ -23,14 +24,16 @@ export function RosterFilters({ action, squads, clubs, squadId, clubId, children
       onChange={(event) => event.currentTarget.requestSubmit()}
     >
       {children}
-      <NativeSelect name="squad" defaultValue={squadId ?? ""} aria-label="Squad" className="w-auto">
-        <option value="">All squads</option>
-        {squads.map((squad) => (
-          <option key={squad.id} value={squad.id}>
-            {squad.name}
-          </option>
-        ))}
-      </NativeSelect>
+      {squads && (
+        <NativeSelect name="squad" defaultValue={squadId ?? ""} aria-label="Squad" className="w-auto">
+          <option value="">All squads</option>
+          {squads.map((squad) => (
+            <option key={squad.id} value={squad.id}>
+              {squad.name}
+            </option>
+          ))}
+        </NativeSelect>
+      )}
       {clubs && (
         <NativeSelect name="club" defaultValue={clubId ?? ""} aria-label="Club" className="w-auto">
           <option value="">All clubs</option>

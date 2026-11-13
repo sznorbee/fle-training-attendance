@@ -1,17 +1,12 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { Trash2 } from "lucide-react";
 import { PageSkeleton } from "@/components/page-skeleton";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { requireAdmin } from "@/lib/auth/session";
 import { listMembers } from "@/server/members";
 import { listAthletes, listClubs } from "@/server/roster";
 import { countPendingMarks, getLastSyncRun, isSheetSyncConfigured } from "@/server/sync";
-import { removeMemberAction } from "./actions";
-import { ImportForm, MemberForm, SyncForm } from "./admin-forms";
+import { ImportForm, MembersPanel, SyncForm } from "./admin-forms";
 
 export const metadata: Metadata = { title: "Admin" };
 
@@ -65,7 +60,8 @@ async function Admin() {
           </p>
           {!syncConfigured && (
             <p className="text-muted-foreground">
-              The sync is not configured yet. Set the GOOGLE_* environment variables described in the README.
+              The sync is switched off because the Google Sheet is not connected yet. Until it is, marks stay safely in
+              this app. Whoever maintains the app can connect it by following “Daily sync” in the README.
             </p>
           )}
           <SyncForm disabled={!syncConfigured} />
@@ -80,46 +76,8 @@ async function Admin() {
             record attendance for their club, athletes see their own record, the federation sees and edits everything.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-5">
-          <MemberForm clubs={clubs} athletes={athletes} />
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>E-mail</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Club</TableHead>
-                <TableHead>Athlete</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {members.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell className="font-medium">{member.email}</TableCell>
-                  <TableCell>{member.name}</TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className="capitalize">
-                      {member.role}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{member.clubCode}</TableCell>
-                  <TableCell>
-                    {member.athleteFamilyName} {member.athleteGivenName}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <form action={removeMemberAction}>
-                      <input type="hidden" name="id" value={member.id} />
-                      <Button type="submit" variant="ghost" size="icon" aria-label={`Remove ${member.email}`}>
-                        <Trash2 />
-                      </Button>
-                    </form>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {members.length === 0 && <p className="text-sm text-muted-foreground">Nobody has been given access yet.</p>}
+        <CardContent>
+          <MembersPanel members={members} clubs={clubs} athletes={athletes} />
         </CardContent>
       </Card>
     </>

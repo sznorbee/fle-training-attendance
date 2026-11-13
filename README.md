@@ -14,7 +14,7 @@ sheet once a day.
 
 | Screen | Who | Purpose |
 | --- | --- | --- |
-| `/attendance` | coaches, federation | Record one day: Absent / Present / Lesson / Other (+ reason) per athlete, "Mark the rest absent" |
+| `/attendance` | coaches, federation | Record one day: pick it in the week strip, tap a name once for present and twice for lesson, use ⋯ for absent or a reason, then "Finish" marks the rest absent (with undo) |
 | `/overview` | coaches, federation | Month grid like the spreadsheet, with +, −, % and lessons |
 | `/athletes/[id]` | everyone allowed to see that athlete | Season summary and month-by-month record |
 | `/admin` | federation | Import the .xlsx, manage who has access, run/inspect the sheet sync |

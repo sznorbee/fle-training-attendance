@@ -3,15 +3,14 @@
 import { z } from "zod";
 import { markStatusEnum } from "@/db/schema";
 import { getAccess } from "@/lib/auth/session";
-import { isIsoDate, seasonMonths, seasonStartYear } from "@/lib/dates";
-import { ForbiddenError, markUnrecordedAbsent, setMark } from "@/server/attendance";
+import { isInSeason, isIsoDate, season, seasonStartYear } from "@/lib/dates";
+import { clearMarks, ForbiddenError, markUnrecordedAbsent, setMark } from "@/server/attendance";
 
 export type ActionResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 
-const daySchema = z.string().refine((value) => {
-  if (!isIsoDate(value)) return false;
-  return seasonMonths(seasonStartYear()).some((month) => value.startsWith(month.key));
-}, "The date is outside the current season.");
+const daySchema = z
+  .string()
+  .refine((value) => isIsoDate(value) && isInSeason(value, season(seasonStartYear())), "The date is outside the current season.");
 
 const markSchema = z.object({
   athleteId: z.number().int().positive(),
@@ -49,9 +48,18 @@ export async function saveMarkAction(input: z.input<typeof markSchema>): Promise
   });
 }
 
-export async function markUnrecordedAbsentAction(input: z.input<typeof bulkSchema>): Promise<ActionResult<number>> {
+/** Returns the ids of the athletes that were marked absent, so the action can be undone. */
+export async function markUnrecordedAbsentAction(input: z.input<typeof bulkSchema>): Promise<ActionResult<number[]>> {
   return run(async () => {
     const { athleteIds, day } = bulkSchema.parse(input);
     return markUnrecordedAbsent(await currentViewer(), athleteIds, day);
+  });
+}
+
+export async function clearMarksAction(input: z.input<typeof bulkSchema>): Promise<ActionResult> {
+  return run(async () => {
+    const { athleteIds, day } = bulkSchema.parse(input);
+    await clearMarks(await currentViewer(), athleteIds, day);
+    return undefined;
   });
 }

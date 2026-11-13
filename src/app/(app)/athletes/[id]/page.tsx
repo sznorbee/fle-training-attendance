@@ -5,9 +5,8 @@ import { MarkCell } from "@/components/mark-cell";
 import { PageSkeleton } from "@/components/page-skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { requireViewer } from "@/lib/auth/session";
-import { monthDays, seasonMonths, seasonStartYear } from "@/lib/dates";
+import { monthDays, season, seasonMonths, seasonStartYear, today } from "@/lib/dates";
 import { formatRate, summarize } from "@/lib/stats";
 import { getMarks } from "@/server/attendance";
 import { getAthlete } from "@/server/roster";
@@ -22,18 +21,21 @@ async function AthleteDetails({ params }: Props) {
   const athlete = await getAthlete(viewer, Number((await params).id));
   if (!athlete) notFound();
 
-  const months = seasonMonths(seasonStartYear());
-  const firstDay = `${months[0].key}-01`;
-  const lastDay = monthDays(months.at(-1)!.year, months.at(-1)!.month).at(-1)!;
-  const marks = await getMarks([athlete.id], firstDay, lastDay);
+  const currentSeason = season(seasonStartYear());
+  const marks = await getMarks([athlete.id], currentSeason.first, currentSeason.last);
+  // Months still to come are left out until something is recorded in them.
+  const thisMonth = today().slice(0, 7);
+  const months = seasonMonths(seasonStartYear()).filter(
+    (month) => month.key <= thisMonth || marks.some((mark) => mark.day.startsWith(month.key)),
+  );
   const markByDay = new Map(marks.map((mark) => [mark.day, mark]));
-  const season = summarize(marks.map((mark) => mark.status));
+  const seasonSummary = summarize(marks.map((mark) => mark.status));
 
   const stats = [
-    { label: "Trainings attended", value: season.present },
-    { label: "Absences", value: season.absent },
-    { label: "Attendance rate", value: formatRate(season.rate) },
-    { label: "Lessons", value: season.lessons },
+    { label: "Trainings attended", value: seasonSummary.present },
+    { label: "Absences", value: seasonSummary.absent },
+    { label: "Attendance rate", value: formatRate(seasonSummary.rate), hint: "of recorded days" },
+    { label: "Lessons", value: seasonSummary.lessons },
   ];
 
   return (
@@ -55,6 +57,7 @@ async function AthleteDetails({ params }: Props) {
             <CardHeader>
               <CardDescription>{stat.label}</CardDescription>
               <CardTitle className="text-2xl tabular-nums">{stat.value}</CardTitle>
+              {"hint" in stat && <p className="text-xs text-muted-foreground">{stat.hint}</p>}
             </CardHeader>
           </Card>
         ))}
@@ -62,46 +65,33 @@ async function AthleteDetails({ params }: Props) {
 
       <Card>
         <CardHeader>
-          <CardTitle>
-            Season {months[0].year}/{months.at(-1)!.year}
-          </CardTitle>
+          <CardTitle>Season {currentSeason.label}</CardTitle>
           <CardDescription>0 = absent · 1 = present · 2 = present with lesson · ✱ = other</CardDescription>
         </CardHeader>
-        <CardContent className="px-2">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Month</TableHead>
-                <TableHead>Days</TableHead>
-                <TableHead className="text-right">+</TableHead>
-                <TableHead className="text-right">−</TableHead>
-                <TableHead className="text-right">%</TableHead>
-                <TableHead className="text-right">Lessons</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {months.map((month) => {
-                const monthMarks = marks.filter((mark) => mark.day.startsWith(month.key));
-                const summary = summarize(monthMarks.map((mark) => mark.status));
-                return (
-                  <TableRow key={month.key}>
-                    <TableCell className="font-medium">{month.label}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-px">
-                        {monthDays(month.year, month.month).map((day) => (
-                          <MarkCell key={day} mark={markByDay.get(day)} className="size-5 bg-muted/50 text-[10px]" />
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">{summary.present}</TableCell>
-                    <TableCell className="text-right tabular-nums">{summary.absent}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatRate(summary.rate)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{summary.lessons}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+        <CardContent>
+          <ul className="flex flex-col divide-y">
+            {months.map((month) => {
+              const monthMarks = marks.filter((mark) => mark.day.startsWith(month.key));
+              const summary = summarize(monthMarks.map((mark) => mark.status));
+              return (
+                <li key={month.key} className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                    <h3 className="font-medium">{month.label}</h3>
+                    <p className="text-sm text-muted-foreground tabular-nums">
+                      {summary.present} attended · {summary.absent} absent · {formatRate(summary.rate)} · {summary.lessons}{" "}
+                      {summary.lessons === 1 ? "lesson" : "lessons"}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-0.5">
+                    {monthDays(month.year, month.month).map((day) => (
+                      <MarkCell key={day} mark={markByDay.get(day)} className="size-5 bg-muted/60 text-[10px]" />
+                    ))}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          {months.length === 0 && <p className="text-sm text-muted-foreground">The season has not started yet.</p>}
         </CardContent>
       </Card>
     </>
