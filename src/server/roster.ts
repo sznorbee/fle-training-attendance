@@ -53,3 +53,21 @@ export async function getAthlete(viewer: Viewer, athleteId: number): Promise<Ros
 
 export const listClubs = () => db.select().from(clubs).orderBy(asc(clubs.code));
 export const listSquads = () => db.select().from(squads).orderBy(asc(squads.id));
+
+/** The viewer's club: their own, or for an athlete account the club of the linked athlete. */
+export async function getClubCode(viewer: Viewer): Promise<string | null> {
+  if (viewer.clubId !== null) {
+    const [club] = await db.select({ code: clubs.code }).from(clubs).where(eq(clubs.id, viewer.clubId)).limit(1);
+    return club?.code ?? null;
+  }
+  if (viewer.athleteId !== null) {
+    const [athlete] = await db
+      .select({ code: clubs.code })
+      .from(athletes)
+      .innerJoin(clubs, eq(clubs.id, athletes.clubId))
+      .where(eq(athletes.id, viewer.athleteId))
+      .limit(1);
+    return athlete?.code ?? null;
+  }
+  return null;
+}

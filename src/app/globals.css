@@ -59,3 +59,15 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Side sheet entrance (see components/ui/sheet.tsx). */
+@keyframes sheet-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes sheet-fade {
+  from {
+    opacity: 0;
+  }
+}
